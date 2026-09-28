@@ -30,6 +30,6 @@ pnpm preview
 The production files are written to `dist/`. `pnpm preview` serves that
 directory locally after a build.
 
-The enquiry form is currently a presentation flow: it validates the required
-fields and shows a confirmation state, but it does not send submissions to an
-inbox or other service. Connect a form endpoint before launch.
+The enquiry form submits to Formspree and forwards enquiries to the Doughlish
+business inbox. It includes the visitor’s email as the reply address and uses
+the subject line `Doughlish Website Enquiries`.

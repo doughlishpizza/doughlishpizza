@@ -17,6 +17,9 @@ const faqs = [
   ['What does pizza trailer hire include?', 'The Doughlish experience brings the oven, the making and the service directly to your celebration. Every event is considered individually, so your enquiry is the best place to discuss what your occasion needs.'],
 ];
 
+const FORMSPREE_ENDPOINT = 'https://formspree.io/f/xrpbowgg';
+const ENQUIRY_SUBJECT = 'Doughlish Website Enquiries';
+
 function scrollToEnquire() {
   document.querySelector('#enquire')?.scrollIntoView({ behavior: 'smooth' });
 }
@@ -24,17 +27,37 @@ function scrollToEnquire() {
 function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState(0);
-  const [submitted, setSubmitted] = useState(false);
+  const [submissionStatus, setSubmissionStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
   const [form, setForm] = useState({ name: '', email: '', date: '', location: '', guests: '', event: 'Wedding', notes: '' });
 
   const updateField = (field: keyof typeof form, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
-    if (submitted) setSubmitted(false);
+    if (submissionStatus !== 'idle') setSubmissionStatus('idle');
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setSubmitted(true);
+    setSubmissionStatus('sending');
+
+    try {
+      const response = await fetch(FORMSPREE_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...form,
+          _replyto: form.email,
+          _subject: ENQUIRY_SUBJECT,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Form submission failed');
+      setSubmissionStatus('success');
+    } catch {
+      setSubmissionStatus('error');
+    }
   };
 
   return (
@@ -245,7 +268,7 @@ function App() {
                 <label className="text-xs font-bold uppercase tracking-[.1em] text-[#f8efda]/72">Occasion<select value={form.event} onChange={(event) => updateField('event', event.target.value)} className="mt-2 w-full border-b border-[#f8efda]/30 bg-[#511713] px-0 py-3 text-base font-normal normal-case tracking-normal text-[#f8efda] outline-none focus:border-[#e6b86c]" data-testid="select-event"><option>Wedding</option><option>Private party</option><option>Corporate event</option><option>Festival or function</option><option>Something else</option></select></label>
               </div>
               <label className="mt-6 block text-xs font-bold uppercase tracking-[.1em] text-[#f8efda]/72">Tell us anything useful<textarea value={form.notes} onChange={(event) => updateField('notes', event.target.value)} rows={4} className="mt-2 w-full resize-none border-b border-[#f8efda]/30 bg-transparent px-0 py-3 text-base font-normal normal-case tracking-normal text-[#f8efda] outline-none placeholder:text-[#f8efda]/35 focus:border-[#e6b86c]" placeholder="The vibe, the venue, dietary needs, your big idea..." data-testid="textarea-notes" /></label>
-              <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><button type="submit" className="btn-fire rounded-full px-6 py-4 text-sm font-bold uppercase tracking-[.12em]" data-testid="button-submit-enquiry">Send enquiry <ArrowRight className="ml-2 inline-block" size={17} /></button>{submitted ? <p className="flex items-start gap-2 text-xs leading-relaxed text-[#e6b86c]" role="status" data-testid="status-enquiry"><Check size={16} className="mt-0.5 shrink-0" /> Thanks, {form.name || 'there'} — your enquiry is ready to be followed up. This demo has no connected inbox yet.</p> : <p className="max-w-[230px] text-[11px] leading-relaxed text-[#f8efda]/42">This is a presentation flow. Connect your preferred inbox or form endpoint before launch.</p>}</div>
+              <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><button type="submit" disabled={submissionStatus === 'sending'} className="btn-fire rounded-full px-6 py-4 text-sm font-bold uppercase tracking-[.12em] disabled:cursor-wait disabled:opacity-70" data-testid="button-submit-enquiry">Send enquiry <ArrowRight className="ml-2 inline-block" size={17} /></button>{submissionStatus === 'success' ? <p className="flex items-start gap-2 text-xs leading-relaxed text-[#e6b86c]" role="status" data-testid="status-enquiry"><Check size={16} className="mt-0.5 shrink-0" /> Thanks, {form.name || 'there'} — your enquiry has been sent to the Doughlish team.</p> : submissionStatus === 'error' ? <p className="max-w-[260px] text-xs leading-relaxed text-[#f8efda]/75" role="alert" data-testid="status-enquiry">We couldn’t send your enquiry right now. Please try again.</p> : <p className="max-w-[230px] text-[11px] leading-relaxed text-[#f8efda]/42">Your enquiry will be sent to the Doughlish team.</p>}</div>
             </form>
           </div>
         </section>
